@@ -1,5 +1,8 @@
-FROM openjdk:17-jdk-slim
-WORKDIR /app
-COPY . .
-RUN ./gradlew build -x test
-ENTRYPOINT ["java", "-jar", "build/libs/webapp_02_sp04-0.0.1-SNAPSHOT.jar"]
+FROM amazoncorretto:17 AS build
+COPY ./ /home/app
+RUN cd /home/app && ./gradlew build
+
+FROM amazoncorretto:17-alpine
+COPY --from=build /home/app/build/libs/webapp_02_sp04-0.0.1-SNAPSHOT.jar /usr/local/lib/spring-render-deploy.jar
+EXPOSE 8080
+ENTRYPOINT ["java","-jar","-Dfile.encoding=UTF-8","/usr/local/lib/spring-render-deploy.jar"]
