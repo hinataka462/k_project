@@ -1,0 +1,66 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.4.0'
+	id 'io.spring.dependency-management' version '1.1.6'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(23)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    //implementation 'com.h2database:h2'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+ 	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+	implementation 'mysql:mysql-connector-java:8.0.33' // 例: MySQL JDBCドライバ
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+tasks.named('processResources') {
+    dependsOn(":frontend:yarn_build")
+}
+
+import org.apache.tools.ant.taskdefs.condition.Os
+
+// Node.jsとYarnの実行パス
+def yarnCommand = Os.isFamily(Os.FAMILY_WINDOWS) ? 'yarn.cmd' : 'yarn'
+
+task yarnBuild(type: Exec) {
+    workingDir 'frontend' // Vue.js のプロジェクトディレクトリ
+    commandLine yarnCommand, 'build'
+}
+
+task copyFrontendBuild(type: Copy) {
+    dependsOn yarnBuild
+    from file('frontend/dist') // Vue.js のビルドディレクトリ
+    into file('src/main/resources/static') // Spring Boot の静的リソースディレクトリ
+}
+// processResourcesタスクがcopyFrontendBuildを実行するように設定
+tasks.named('processResources') {
+    dependsOn copyFrontendBuild
+}
+
+// bootRunの前にフロントエンドをビルドし、ファイルをコピー
+bootRun {
+    dependsOn copyFrontendBuild
+}
+
+// clean時に静的リソースディレクトリをクリア
+clean {
+    delete 'src/main/resources/static'
+}
